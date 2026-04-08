@@ -1,0 +1,65 @@
+# OncoFix MDM Agent — Docker Compose for ARM64 Demo
+#
+# BUILD & RUN:
+#   Option A — Cross-compile on dev machine for ARM64:
+#     docker buildx create --name arm64builder --use
+#     docker buildx build --platform linux/arm64 -t oncofix-mdm-agent:latest --load .
+#     docker save oncofix-mdm-agent:latest | gzip > oncofix-mdm-agent-arm64.tar.gz
+#     scp oncofix-mdm-agent-arm64.tar.gz pi@<pi-ip>:/home/pi/
+#     # On Pi: docker load < oncofix-mdm-agent-arm64.tar.gz
+#     #        docker compose up -d
+#
+#   Option B — Build directly on the Pi (native ARM64):
+#     docker compose up -d --build
+
+services:
+  mdm-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: oncofix-mdm-agent:latest
+    container_name: oncofix-mdm-agent
+    restart: unless-stopped
+
+    environment:
+      - MDM_SERVER_URL=${MDM_SERVER_URL:-http://host.docker.internal:443}
+      - DEVICE_ID=${DEVICE_ID:-demo-device-001}
+      - DEVICE_TOKEN=${DEVICE_TOKEN:-demo-token-placeholder}
+      - HEARTBEAT_INTERVAL_MS=${HEARTBEAT_INTERVAL_MS:-60000}
+      - COMMAND_POLL_INTERVAL_MS=${COMMAND_POLL_INTERVAL_MS:-60000}
+      - UPDATE_CHECK_INTERVAL_MS=${UPDATE_CHECK_INTERVAL_MS:-300000}
+
+    volumes:
+      # Persist agent SQLite database across restarts
+      - mdm-data:/var/lib/oncofix
+
+      # Persist logs
+      - mdm-logs:/var/log/oncofix
+
+      # Pre-seeded identity file (skips provisioning for demo)
+      - ./docker/demo-identity.json:/etc/oncofix/device-identity.json:ro
+
+      # Mount host /proc for real hardware info (uncomment on Pi)
+      # - /proc/cpuinfo:/proc/cpuinfo:ro
+      # - /proc/device-tree/model:/proc/device-tree/model:ro
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Local HTTP server for .deb files — used for OTA update demo
+  # Place .deb files in ./docker/debs/ on the host
+  deb-server:
+    image: nginx:alpine
+    container_name: oncofix-deb-server
+    volumes:
+      - ./docker/debs:/usr/share/nginx/html:ro
+    ports:
+      - "9090:80"
+    restart: unless-stopped
+
+volumes:
+  mdm-data:
+  mdm-logs:

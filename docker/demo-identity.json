@@ -1,0 +1,10 @@
+{
+  "device_id": "dev_oncofix-de_1774262143873",
+  "device_token": "a2b4e0ea359cbf987180639852b3607bcd0b5f772ed36f3a0f0b340ece55a946",
+  "server_url": "http://host.docker.internal:443",
+  "mac_address": "02:42:ac:11:00:02",
+  "cpu_serial": "0000000000demo01",
+  "board_model": "Raspberry Pi 5 Model B",
+  "hostname": "oncofix-demo-pi",
+  "provisioned_at": "2026-03-23T10:35:00.000Z"
+}
