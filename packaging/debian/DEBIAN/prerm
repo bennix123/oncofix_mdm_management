@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+echo "=== OncoFix Pre-Removal ==="
+
+# Stop services gracefully
+systemctl stop oncofix-mdm-agent.service 2>/dev/null || true
+systemctl stop oncofix-backend.service 2>/dev/null || true
+systemctl stop oncofix-ai.service 2>/dev/null || true
+systemctl disable oncofix-mdm-agent.service 2>/dev/null || true
+systemctl disable oncofix-backend.service 2>/dev/null || true
+systemctl disable oncofix-ai.service 2>/dev/null || true
+
+# Remove nginx site link (but keep the config file)
+rm -f /etc/nginx/sites-enabled/oncofix-frontend
+systemctl reload nginx 2>/dev/null || true
+
+echo "Services stopped and disabled."

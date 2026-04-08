@@ -1,0 +1,38 @@
+#!/bin/bash
+set -e
+
+echo "=== OncoFix Pre-Installation ==="
+
+# Check Node.js
+if ! command -v node &> /dev/null; then
+    echo "ERROR: Node.js is not installed. Install Node.js 18+ first:"
+    echo "  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -"
+    echo "  sudo apt-get install -y nodejs"
+    exit 1
+fi
+
+NODE_VER=$(node -v | sed 's/v//' | cut -d. -f1)
+if [ "$NODE_VER" -lt 18 ]; then
+    echo "ERROR: Node.js 18+ required. Found: $(node -v)"
+    exit 1
+fi
+
+# Check Python3
+if ! command -v python3 &> /dev/null; then
+    echo "ERROR: Python3 is not installed."
+    exit 1
+fi
+
+# Create oncofix system user if it doesn't exist
+if ! id -u oncofix &>/dev/null 2>&1; then
+    useradd --system --home-dir /opt/oncofix --shell /usr/sbin/nologin --create-home oncofix
+    echo "Created system user: oncofix"
+fi
+
+# Create directories
+mkdir -p /opt/oncofix
+mkdir -p /var/lib/oncofix
+mkdir -p /var/log/oncofix
+mkdir -p /etc/oncofix
+
+echo "Pre-installation checks passed."

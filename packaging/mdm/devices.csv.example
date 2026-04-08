@@ -1,0 +1,9 @@
+# OncoFix Device Inventory
+# Format: device_id,device_name,location,ip_address,ssh_user,ssh_port
+# Lines starting with # are ignored
+#
+OPi5_clinic_001,Mumbai Clinic Unit 1,Mumbai,192.168.1.101,root,22
+OPi5_clinic_002,Mumbai Clinic Unit 2,Mumbai,192.168.1.102,root,22
+OPi5_clinic_003,Delhi Clinic Unit 1,Delhi,192.168.1.103,root,22
+OPi5_clinic_004,Chennai Clinic Unit 1,Chennai,192.168.1.104,root,22
+OPi5_clinic_005,Kolkata Clinic Unit 1,Kolkata,192.168.1.105,root,22

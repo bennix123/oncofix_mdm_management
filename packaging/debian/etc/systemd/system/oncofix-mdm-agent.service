@@ -1,0 +1,36 @@
+[Unit]
+Description=OncoFix MDM Agent (Device Management)
+Documentation=https://github.com/oncofix
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=oncofix
+Group=oncofix
+WorkingDirectory=/opt/oncofix/oncofix_mdm_agent
+EnvironmentFile=/etc/oncofix/backend.env
+ExecStart=/usr/bin/node dist/main.js
+Restart=always
+RestartSec=15
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+# Logging
+StandardOutput=append:/var/log/oncofix/agent.log
+StandardError=append:/var/log/oncofix/agent-error.log
+
+# Security hardening
+NoNewPrivileges=true
+ProtectHome=true
+ReadWritePaths=/var/lib/oncofix
+ReadWritePaths=/var/log/oncofix
+ReadWritePaths=/etc/oncofix
+PrivateTmp=true
+
+# Resource limits — agent is lightweight
+MemoryMax=256M
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

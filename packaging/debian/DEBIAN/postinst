@@ -1,0 +1,102 @@
+#!/bin/bash
+set -e
+
+echo "=== OncoFix Post-Installation ==="
+
+INSTALL_DIR=/opt/oncofix
+BACKEND_DIR=$INSTALL_DIR/oncofix_online_backend
+FRONTEND_DIR=$INSTALL_DIR/health-intake-form
+AI_DIR=$BACKEND_DIR/monai-cancer-predictor
+ONCOFIX_USER=oncofix
+
+# -------------------------------------------------------
+# 1. Set up Python virtual environment for AI model
+# -------------------------------------------------------
+if [ -d "$AI_DIR" ] && [ ! -d "$AI_DIR/cancer_env" ]; then
+    echo "Setting up Python virtual environment for AI model..."
+    python3 -m venv "$AI_DIR/cancer_env"
+    "$AI_DIR/cancer_env/bin/pip" install --upgrade pip
+    if [ -f "$AI_DIR/requirements.txt" ]; then
+        "$AI_DIR/cancer_env/bin/pip" install -r "$AI_DIR/requirements.txt" || \
+            echo "WARNING: Some Python dependencies failed. Install manually later."
+    fi
+fi
+
+# -------------------------------------------------------
+# 2. Set permissions
+# -------------------------------------------------------
+chown -R $ONCOFIX_USER:$ONCOFIX_USER /opt/oncofix
+chown -R $ONCOFIX_USER:$ONCOFIX_USER /var/lib/oncofix
+chown -R $ONCOFIX_USER:$ONCOFIX_USER /var/log/oncofix
+chown -R $ONCOFIX_USER:$ONCOFIX_USER /etc/oncofix
+chmod 600 /etc/oncofix/backend.env
+chmod 600 /etc/oncofix/frontend.env
+
+# Create required backend directories
+mkdir -p "$BACKEND_DIR/uploads" "$BACKEND_DIR/logs" "$BACKEND_DIR/backups" "$BACKEND_DIR/public/photos"
+chown -R $ONCOFIX_USER:$ONCOFIX_USER "$BACKEND_DIR/uploads" "$BACKEND_DIR/logs" "$BACKEND_DIR/backups" "$BACKEND_DIR/public"
+
+# -------------------------------------------------------
+# 3. Enable Nginx site
+# -------------------------------------------------------
+ln -sf /etc/nginx/sites-available/oncofix-frontend /etc/nginx/sites-enabled/oncofix-frontend
+# Remove default site if it exists
+rm -f /etc/nginx/sites-enabled/default
+nginx -t 2>/dev/null && systemctl reload nginx || echo "WARNING: Nginx config test failed. Check /etc/nginx/sites-available/oncofix-frontend"
+
+# -------------------------------------------------------
+# 4. Enable and start RabbitMQ
+# -------------------------------------------------------
+systemctl enable rabbitmq-server || true
+systemctl start rabbitmq-server || true
+
+# -------------------------------------------------------
+# 5. Enable and start systemd services
+# -------------------------------------------------------
+systemctl daemon-reload
+systemctl enable oncofix-backend.service || true
+systemctl enable oncofix-ai.service || true
+systemctl enable oncofix-mdm-agent.service || true
+systemctl enable nginx || true
+
+# Enable provisioning service (only runs if device-identity.json missing)
+systemctl enable oncofix-provision.service || true
+
+# -------------------------------------------------------
+# 6. Start services
+# -------------------------------------------------------
+echo "Starting OncoFix services..."
+systemctl start oncofix-backend.service || echo "WARNING: Backend failed to start. Check: journalctl -u oncofix-backend"
+systemctl start oncofix-ai.service || echo "WARNING: AI service failed to start. Check: journalctl -u oncofix-ai"
+systemctl start oncofix-mdm-agent.service || echo "WARNING: MDM agent failed to start. Check: journalctl -u oncofix-mdm-agent"
+systemctl restart nginx || echo "WARNING: Nginx failed to restart."
+
+echo ""
+echo "============================================"
+echo "  OncoFix installed successfully!"
+echo "============================================"
+echo ""
+echo "  Backend API : http://localhost:443/api/v1"
+echo "  Frontend    : http://localhost:8082"
+echo "  RabbitMQ    : amqp://localhost:5672"
+echo ""
+echo "  Config files:"
+echo "    Backend env : /etc/oncofix/backend.env"
+echo "    Frontend env: /etc/oncofix/frontend.env"
+echo "    GCP creds   : /etc/oncofix/gcp-credentials.json (place manually)"
+echo ""
+echo "  Commands:"
+echo "    sudo systemctl status oncofix-backend"
+echo "    sudo systemctl status oncofix-ai"
+echo "    sudo journalctl -u oncofix-backend -f"
+echo ""
+echo "  IMPORTANT: Edit /etc/oncofix/backend.env to set:"
+echo "    - JWT_SECRET (change from default!)"
+echo "    - PHOTO_ENCRYPTION_KEY"
+echo "    - BigQuery credentials path (if syncing)"
+echo ""
+echo "  Place credential files manually:"
+echo "    - GCP:      /opt/oncofix/oncofix_online_backend/oncoedge-479901-2c5892ef6e2b.json"
+echo "    - Firebase:  /opt/oncofix/oncofix_online_backend/firebase-service-account.json"
+echo "    Then: sudo chown oncofix:oncofix /opt/oncofix/oncofix_online_backend/*.json"
+echo ""

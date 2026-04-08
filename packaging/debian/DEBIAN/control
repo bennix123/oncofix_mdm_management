@@ -1,0 +1,19 @@
+Package: oncofix
+Version: 1.0.0
+Section: healthcare
+Priority: optional
+Architecture: all
+Depends: nodejs (>= 18.0.0), python3 (>= 3.8), python3-venv, nginx, sqlite3, rabbitmq-server, erlang-base
+Recommends: pm2
+Maintainer: OncoFix Team <support@oncofix.com>
+Description: OncoFix - Oral Cancer Screening Platform
+ OncoFix is an offline-first healthcare application for oral cancer
+ screening on OrangePi5 devices.
+ .
+ Components:
+  - NestJS backend API (port 443)
+  - React frontend SPA (port 8082 via Nginx)
+  - MONAI AI cancer prediction model
+  - RabbitMQ-based sync to Google BigQuery
+ .
+ Default device ID: OPi5_oncofix_default_001
