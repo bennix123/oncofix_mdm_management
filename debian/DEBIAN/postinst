@@ -1,0 +1,124 @@
+#!/bin/bash
+set -e
+
+echo "=== OncoFix Post-Installation ==="
+
+INSTALL_DIR=/opt/oncofix
+BACKEND_DIR=$INSTALL_DIR/oncofix_online_backend
+FRONTEND_DIR=$INSTALL_DIR/health-intake-form
+AI_DIR=$BACKEND_DIR/monai-cancer-predictor
+ONCOFIX_USER=oncofix
+
+# -------------------------------------------------------
+# 1. Verify Node.js version
+# -------------------------------------------------------
+if ! command -v node &> /dev/null; then
+    echo "ERROR: Node.js is not installed. Install Node.js 20+ first:"
+    echo "  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -"
+    echo "  sudo apt-get install -y nodejs"
+    exit 1
+fi
+
+NODE_VER=$(node -v | sed 's/v//' | cut -d. -f1)
+if [ "$NODE_VER" -lt 18 ]; then
+    echo "ERROR: Node.js 18+ required. Found: $(node -v)"
+    exit 1
+fi
+
+# -------------------------------------------------------
+# 2. Rebuild native Node modules for this architecture
+# -------------------------------------------------------
+echo "Rebuilding native Node modules for $(uname -m)..."
+cd "$BACKEND_DIR"
+npm rebuild --no-optional 2>/dev/null || echo "WARNING: npm rebuild had issues."
+
+# -------------------------------------------------------
+# 3. Install serve for frontend static file serving
+# -------------------------------------------------------
+if ! command -v serve &> /dev/null; then
+    echo "Installing serve for frontend..."
+    npm install -g serve
+fi
+
+# -------------------------------------------------------
+# 4. Set up Python virtual environment for AI model
+# -------------------------------------------------------
+if [ -d "$AI_DIR" ] && [ ! -d "$AI_DIR/cancer_env" ]; then
+    echo "Setting up Python virtual environment for AI model..."
+    python3 -m venv "$AI_DIR/cancer_env"
+    "$AI_DIR/cancer_env/bin/pip" install --upgrade pip
+    if [ -f "$AI_DIR/requirements.txt" ]; then
+        "$AI_DIR/cancer_env/bin/pip" install -r "$AI_DIR/requirements.txt" || \
+            echo "WARNING: Some Python dependencies failed. Install manually later."
+    fi
+fi
+
+# -------------------------------------------------------
+# 5. Add oncofix user to required groups
+# -------------------------------------------------------
+usermod -aG video $ONCOFIX_USER 2>/dev/null || true
+usermod -aG gpio $ONCOFIX_USER 2>/dev/null || true
+usermod -aG dialout $ONCOFIX_USER 2>/dev/null || true
+usermod -aG i2c $ONCOFIX_USER 2>/dev/null || true
+
+# -------------------------------------------------------
+# 6. Set permissions
+# -------------------------------------------------------
+chown -R $ONCOFIX_USER:$ONCOFIX_USER /opt/oncofix
+chown -R $ONCOFIX_USER:$ONCOFIX_USER /var/lib/oncofix
+chown -R $ONCOFIX_USER:$ONCOFIX_USER /var/log/oncofix
+chown -R $ONCOFIX_USER:$ONCOFIX_USER /etc/oncofix
+chmod 600 /etc/oncofix/backend.env
+chmod 600 /etc/oncofix/frontend.env
+
+# Create required backend directories
+mkdir -p "$BACKEND_DIR/uploads" "$BACKEND_DIR/logs" "$BACKEND_DIR/backups" "$BACKEND_DIR/public/photos" "$BACKEND_DIR/photos" "$BACKEND_DIR/data"
+chown -R $ONCOFIX_USER:$ONCOFIX_USER "$BACKEND_DIR/uploads" "$BACKEND_DIR/logs" "$BACKEND_DIR/backups" "$BACKEND_DIR/public" "$BACKEND_DIR/photos" "$BACKEND_DIR/data"
+
+# -------------------------------------------------------
+# 7. Enable and start systemd services
+# -------------------------------------------------------
+systemctl daemon-reload
+systemctl enable oncofix-backend.service || true
+systemctl enable oncofix-frontend.service || true
+
+# Enable optional services if they exist
+systemctl enable oncofix-ai.service 2>/dev/null || true
+
+# -------------------------------------------------------
+# 8. Start services
+# -------------------------------------------------------
+echo "Starting OncoFix services..."
+systemctl start oncofix-backend.service || echo "WARNING: Backend failed to start. Check: journalctl -u oncofix-backend"
+systemctl start oncofix-frontend.service || echo "WARNING: Frontend failed to start. Check: journalctl -u oncofix-frontend"
+
+echo ""
+echo "============================================"
+echo "  OncoFix installed successfully!"
+echo "============================================"
+echo ""
+echo "  Backend API : http://localhost:3000/api/v1"
+echo "  Frontend    : http://localhost:5173"
+echo ""
+echo "  Config files:"
+echo "    Backend env : /etc/oncofix/backend.env"
+echo "    Frontend env: /etc/oncofix/frontend.env"
+echo ""
+echo "  Commands:"
+echo "    sudo systemctl status oncofix-backend"
+echo "    sudo systemctl status oncofix-frontend"
+echo "    sudo journalctl -u oncofix-backend -f"
+echo ""
+echo "  IMPORTANT: Edit /etc/oncofix/backend.env to set:"
+echo "    - JWT_SECRET (change from default!)"
+echo "    - PHOTO_ENCRYPTION_KEY"
+echo ""
+echo "  Place credential files:"
+echo "    - BigQuery: /opt/oncofix/oncofix_online_backend/bigquery-credentials.json"
+echo "    Then: sudo chown oncofix:oncofix /opt/oncofix/oncofix_online_backend/*.json"
+echo ""
+echo "  Register device (first time only):"
+echo "    curl -X POST http://localhost:3000/api/v1/devices/register \\"
+echo "      -H 'Content-Type: application/json' \\"
+echo "      -d '{\"deviceAdapterId\":\"OPi5_001\",\"hospitalName\":\"Your Hospital\",\"hospitalEmail\":\"email@hospital.com\",\"adminName\":\"Admin\",\"adminPhone\":1234567890,\"adminEmail\":\"admin@hospital.com\",\"adminPassword\":\"YourPassword\"}'"
+echo ""

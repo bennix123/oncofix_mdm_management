@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+echo "=== OncoFix Pre-Removal ==="
+
+# Stop services gracefully
+systemctl stop oncofix-frontend.service 2>/dev/null || true
+systemctl stop oncofix-backend.service 2>/dev/null || true
+systemctl stop oncofix-ai.service 2>/dev/null || true
+systemctl disable oncofix-frontend.service 2>/dev/null || true
+systemctl disable oncofix-backend.service 2>/dev/null || true
+systemctl disable oncofix-ai.service 2>/dev/null || true
+
+echo "Services stopped and disabled."

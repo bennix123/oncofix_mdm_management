@@ -1,0 +1,30 @@
+[Unit]
+Description=OncoFix AI Cancer Prediction Service (Python)
+Documentation=https://github.com/oncofix
+After=network.target
+
+[Service]
+Type=simple
+User=oncofix
+Group=oncofix
+WorkingDirectory=/opt/oncofix/oncofix_online_backend/monai-cancer-predictor
+ExecStart=/opt/oncofix/oncofix_online_backend/monai-cancer-predictor/cancer_env/bin/python analyze_api.py
+Restart=always
+RestartSec=15
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+# Logging
+StandardOutput=append:/var/log/oncofix/ai.log
+StandardError=append:/var/log/oncofix/ai-error.log
+
+# Security hardening
+NoNewPrivileges=true
+ProtectHome=true
+PrivateTmp=true
+
+# AI model needs more memory
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target

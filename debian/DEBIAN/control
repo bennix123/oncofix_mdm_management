@@ -1,0 +1,21 @@
+Package: oncofix
+Version: 2.0.0
+Section: healthcare
+Priority: optional
+Architecture: arm64
+Installed-Size: 210000
+Depends: nodejs (>= 18.0.0), python3 (>= 3.8), python3-venv, sqlite3
+Recommends: rabbitmq-server
+Maintainer: OncoFix Team <support@oncofix.com>
+Description: OncoFix - Oral Cancer Screening Platform
+ OncoFix is an offline-first healthcare application for oral cancer
+ screening on Debian devices (OrangePi5, Raspberry Pi, etc).
+ .
+ Components:
+  - NestJS backend API (port 3000)
+  - React frontend SPA (port 5173 via serve)
+  - MONAI AI cancer prediction model
+  - SQLite local storage with BigQuery sync
+ .
+ Sync: offline-first, syncs to BigQuery every 5 min when internet available.
+ RabbitMQ is optional - sync falls back to direct BigQuery insert.

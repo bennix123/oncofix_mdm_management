@@ -1,0 +1,21 @@
+[Unit]
+Description=OncoFix First-Boot Provisioning (runs once)
+Documentation=https://github.com/oncofix
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/etc/oncofix/device-identity.json
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+User=root
+WorkingDirectory=/opt/oncofix
+ExecStart=/usr/bin/node /opt/oncofix/oncofix_mdm_agent/dist/main.js --provision-only
+TimeoutStartSec=600
+
+# Logging
+StandardOutput=append:/var/log/oncofix/provision.log
+StandardError=append:/var/log/oncofix/provision-error.log
+
+[Install]
+WantedBy=multi-user.target

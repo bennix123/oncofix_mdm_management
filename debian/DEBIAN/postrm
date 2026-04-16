@@ -1,0 +1,24 @@
+#!/bin/bash
+set -e
+
+echo "=== OncoFix Post-Removal ==="
+
+case "$1" in
+    purge)
+        # Full removal: delete data, logs, config, user
+        rm -rf /var/lib/oncofix
+        rm -rf /var/log/oncofix
+        rm -rf /etc/oncofix
+        rm -rf /opt/oncofix
+        userdel oncofix 2>/dev/null || true
+        echo "All OncoFix data, logs, and config removed."
+        ;;
+    remove)
+        # Keep data and config for potential reinstall
+        echo "OncoFix removed. Data preserved in /var/lib/oncofix"
+        echo "Config preserved in /etc/oncofix"
+        echo "To fully remove: sudo dpkg --purge oncofix"
+        ;;
+esac
+
+systemctl daemon-reload

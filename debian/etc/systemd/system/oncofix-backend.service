@@ -1,0 +1,37 @@
+[Unit]
+Description=OncoFix Backend API (NestJS)
+Documentation=https://github.com/oncofix
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=oncofix
+Group=oncofix
+WorkingDirectory=/opt/oncofix/oncofix_online_backend
+EnvironmentFile=/etc/oncofix/backend.env
+ExecStart=/usr/bin/node dist/src/main.js
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=oncofix-backend
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/oncofix/oncofix_online_backend
+ReadWritePaths=/var/lib/oncofix
+ReadWritePaths=/var/log/oncofix
+PrivateTmp=true
+
+# Resource limits
+LimitNOFILE=65535
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

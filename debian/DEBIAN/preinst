@@ -1,0 +1,18 @@
+#!/bin/bash
+set -e
+
+echo "=== OncoFix Pre-Installation ==="
+
+# Create oncofix system user if it doesn't exist
+if ! id -u oncofix &>/dev/null 2>&1; then
+    useradd --system --home-dir /opt/oncofix --shell /bin/bash --create-home oncofix
+    echo "Created system user: oncofix"
+fi
+
+# Create directories
+mkdir -p /opt/oncofix
+mkdir -p /var/lib/oncofix
+mkdir -p /var/log/oncofix
+mkdir -p /etc/oncofix
+
+echo "Pre-installation checks passed."
